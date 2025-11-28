@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OpenStream — Open-source Movie Streaming (Demo)</title>
+  <meta name="description" content="A single-file open-source movie streaming demo (HTML/CSS/JS)." />
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#ff6b6b; --glass: rgba(255,255,255,0.03);
+      --maxw:1200px;
+      --radius:12px;
+      --gap:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background:linear-gradient(180deg,#071025 0%, #081427 60%); color:#eef2f7;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+    }
+    .app{max-width:var(--maxw);margin:24px auto;padding:18px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo .mark{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#ffb86b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
+    .brand{font-weight:700;font-size:18px}
+
+    .searchbar{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .searchbar input{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;color:inherit;min-width:220px}
+    .searchbar button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+
+    /* categories */
+    .categories{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 20px}
+    .chip{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:999px;color:var(--muted);cursor:pointer}
+    .chip.active{background:linear-gradient(90deg, rgba(255,107,107,0.12), rgba(255,184,107,0.06));border-color:rgba(255,107,107,0.18);color:var(--accent)}
+
+    /* grid */
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    .poster{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+    .meta{padding:10px}
+    .title{font-weight:700;margin:0 0 6px}
+    .sub{font-size:13px;color:var(--muted)}
+    .card .btn{margin-top:8px;padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#111;font-weight:600;cursor:pointer}
+
+    /* detail */
+    .detail{display:flex;gap:18px;align-items:flex-start}
+    .detail .left{width:320px;min-width:160px}
+    .detail .right{flex:1}
+    .detail .poster-lg{width:100%;border-radius:12px}
+
+    /* player */
+    .player-wrap{background:#000;border-radius:12px;padding:12px}
+    video{width:100%;border-radius:8px;display:block}
+
+    /* small screens */
+    @media (max-width:1000px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)} .detail{flex-direction:column} .searchbar input{min-width:120px}}
+    @media (max-width:420px){.grid{grid-template-columns:repeat(1,1fr)} header{flex-direction:column;align-items:flex-start} .searchbar{width:100%;margin-top:8px} .searchbar input{width:100%}}
+
+    /* small utilities */
+    .breadcrumbs{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .hidden{display:none}
+    .center{display:flex;align-items:center;justify-content:center}
+    .controls{display:flex;gap:8px;margin-top:12px}
+    footer{margin-top:28px;color:var(--muted);font-size:13px;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div class="logo" onclick="goHome()" style="cursor:pointer">
+        <div class="mark">OS</div>
+        <div>
+          <div class="brand">OpenStream</div>
+          <div style="font-size:12px;color:var(--muted)">Open-source demo</div>
+        </div>
+      </div>
+
+      <nav class="searchbar">
+        <input id="searchInput" placeholder="Search movies, actors..." aria-label="search" />
+        <button id="searchBtn">Search</button>
+        <button id="homeBtn" title="Home">Home</button>
+      </nav>
+    </header>
+
+    <main id="view">
+      <!-- Views are rendered by JavaScript using hash routing -->
+    </main>
+
+    <footer>
+      This is a demo. All content is placeholder. Built with ❤️ using only HTML/CSS/JS. — OpenStream
+    </footer>
+  </div>
+
+  <script>
+    /* ---------------------------
+       Data (placeholder movies)
+       ---------------------------*/
+    const MOVIES = [
+      {id:1,title:'The Last Dawn',year:2023,category:'Action',rating:8.1,poster:'https://picsum.photos/seed/1/600/900',desc:'A rogue agent battles time to stop a city-wide catastrophe.'},
+      {id:2,title:'Moonlight Sonata',year:2021,category:'Drama',rating:7.6,poster:'https://picsum.photos/seed/2/600/900',desc:'An intimate portrait of love and music across generations.'},
+      {id:3,title:'Neon Streets',year:2024,category:'Crime',rating:7.9,poster:'https://picsum.photos/seed/3/600/900',desc:'Under the neon glow, fortunes are won and lost.'},
+      {id:4,title:'Orbit',year:2022,category:'Sci-Fi',rating:8.5,poster:'https://picsum.photos/seed/4/600/900',desc:'When a small crew goes off-course, the secrets of their mission surface.'},
+      {id:5,title:'Hidden Garden',year:2020,category:'Family',rating:7.0,poster:'https://picsum.photos/seed/5/600/900',desc:'A magical place changes three siblings forever.'},
+      {id:6,title:'The Heist Code',year:2019,category:'Thriller',rating:7.4,poster:'https://picsum.photos/seed/6/600/900',desc:'A team of unlikely thieves plan the perfect job.'},
+      {id:7,title:'Afterglow',year:2025,category:'Romance',rating:6.9,poster:'https://picsum.photos/seed/7/600/900',desc:'Two strangers collide in a city that never forgets.'},
+      {id:8,title:'Beyond the Lines',year:2018,category:'Documentary',rating:8.7,poster:'https://picsum.photos/seed/8/600/900',desc:'An investigative journey into forgotten histories.'},
+      {id:9,title:'Pulse',year:2024,category:'Horror',rating:6.5,poster:'https://picsum.photos/seed/9/600/900',desc:'When the power goes out, something else turns on.'},
+      {id:10,title:'Skyward',year:2021,category:'Adventure',rating:7.8,poster:'https://picsum.photos/seed/10/600/900',desc:'A voyage across islands in search of a fabled treasure.'},
+      {id:11,title:'Midnight Runner',year:2023,category:'Action',rating:7.2,poster:'https://picsum.photos/seed/11/600/900',desc:'A courier becomes the target of every major crime syndicate.'},
+      {id:12,title:'Quiet Echoes',year:2020,category:'Drama',rating:7.3,poster:'https://picsum.photos/seed/12/600/900',desc:'A small-town radio host faces the echoes of his past.'}
+    ];
+
+    const CATEGORIES = ['All','Action','Drama','Crime','Sci-Fi','Family','Thriller','Romance','Documentary','Horror','Adventure'];
+
+    /* ---------------------------
+       Utilities & Router
+       ---------------------------*/
+    const root = document.getElementById('view');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const homeBtn = document.getElementById('homeBtn');
+
+    function qs(sel, el=document){return el.querySelector(sel)}
+    function qsa(sel, el=document){return Array.from(el.querySelectorAll(sel))}
+
+    function goHome(){ location.hash = '#/'; }
+    homeBtn.addEventListener('click', goHome);
+
+    function render(){
+      const hash = location.hash || '#/';
+      const parts = hash.slice(2).split('/'); // remove #/
+      if(parts[0]==='' || parts[0]==undefined) {
+        renderHome();
+      } else if(parts[0]==='movie'){
+        const id = Number(parts[1]); renderMovie(id);
+      } else if(parts[0]==='play'){
+        const id = Number(parts[1]); renderPlayer(id);
+      } else {
+        renderHome();
+      }
+    }
+
+    window.addEventListener('hashchange', render);
+    window.addEventListener('load', ()=>{ initUI(); render(); });
+
+    /* ---------------------------
+       Home view
+       ---------------------------*/
+    function initUI(){
+      // attach search
+      searchBtn.addEventListener('click', ()=>{
+        const q = searchInput.value.trim();
+        if(!q){ location.hash = '#/'; return }
+        location.hash = '#/?q='+encodeURIComponent(q);
+      });
+      searchInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') searchBtn.click(); });
+    }
+
+    function renderHome(){
+      const url = new URL(location.href);
+      const q = url.searchParams.get('q') || '';
+      const activeCat = url.searchParams.get('cat') || 'All';
+
+      root.innerHTML = `
+        <div class="breadcrumbs">Home / <strong>${activeCat}</strong></div>
+        <div class="categories" id="cats"></div>
+        <section id="gridWrap"></section>
+      `;
+
+      const catsWrap = qs('#cats');
+      CATEGORIES.forEach(cat=>{
+        const btn = document.createElement('button'); btn.className='chip'+(cat===activeCat?' active':''); btn.textContent=cat;
+        btn.onclick = ()=>{
+          const u = new URL(location.href);
+          if(cat==='All') u.searchParams.delete('cat'); else u.searchParams.set('cat',cat);
+          location.href = u.toString();
+        };
+        catsWrap.appendChild(btn);
+      });
+
+      // filter movies
+      let list = MOVIES.slice();
+      if(activeCat && activeCat!=='All') list = list.filter(m=>m.category===activeCat);
+      if(q) list = list.filter(m=> (m.title+ ' '+m.desc).toLowerCase().includes(q.toLowerCase()));
+
+      const gridWrap = qs('#gridWrap');
+      if(list.length===0){ gridWrap.innerHTML = '<div class="center" style="padding:40px">No movies found.</div>'; return }
+
+      const grid = document.createElement('div'); grid.className='grid';
+      list.forEach(m=>{ const card = createCard(m); grid.appendChild(card); });
+      gridWrap.appendChild(grid);
+    }
+
+    function createCard(m){
+      const el = document.createElement('article'); el.className='card';
+      el.innerHTML = `
+        <img loading="lazy" class="poster" src="${m.poster}" alt="${m.title} poster" />
+        <div class="meta">
+          <h3 class="title">${m.title}</h3>
+          <div class="sub">${m.category} • ${m.year} • ⭐ ${m.rating}</div>
+          <div class="controls">
+            <button class="btn" data-id="${m.id}">View</button>
+            <button class="chip" data-play="${m.id}">Play</button>
+          </div>
+        </div>
+      `;
+      el.querySelector('.btn').onclick = ()=>{ location.hash = '#/movie/'+m.id };
+      el.querySelector('[data-play]').onclick = ()=>{ location.hash = '#/play/'+m.id };
+      return el;
+    }
+
+    /* ---------------------------
+       Movie detail view
+       ---------------------------*/
+    function renderMovie(id){
+      const movie = MOVIES.find(m=>m.id===id);
+      if(!movie){ root.innerHTML = '<div class="center" style="padding:40px">Movie not found.</div>'; return }
+
+      root.innerHTML = `
+        <div class="breadcrumbs"><a href="#/">Home</a> / <a href="#/?cat=${encodeURIComponent(movie.category)}">${movie.category}</a> / <strong>${movie.title}</strong></div>
+        <div class="detail">
+          <div class="left">
+            <img class="poster-lg" src="${movie.poster}" alt="${movie.title}" />
+            <div style="margin-top:10px;color:var(--muted)">Year: ${movie.year} • Rating: ${movie.rating}</div>
+          </div>
+          <div class="right">
+            <h1 style="margin:0 0 8px">${movie.title}</h1>
+            <div style="color:var(--muted);margin-bottom:12px">${movie.category} • ${movie.year}</div>
+            <p style="line-height:1.5;color:#dbe6ef">${movie.desc}</p>
+
+            <div class="controls">
+              <button class="btn" id="playNow">Play</button>
+              <button class="chip" id="addWatch">+ Watchlist</button>
+              <button class="chip" id="shareBtn">Share</button>
+            </div>
+
+            <section style="margin-top:18px">
+              <h3 style="margin:0 0 8px">More like this</h3>
+              <div id="moreList" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+            </section>
+          </div>
+        </div>
+      `;
+
+      qs('#playNow').addEventListener('click', ()=>{ location.hash = '#/play/'+movie.id });
+      qs('#addWatch').addEventListener('click', ()=>{ alert('Added to watchlist (demo)') });
+      qs('#shareBtn').addEventListener('click', ()=>{ navigator.clipboard?.writeText(location.href).then(()=>alert('Link copied')) });
+
+      // more like this
+      const more = MOVIES.filter(m=>m.category===movie.category && m.id!==movie.id).slice(0,4);
+      const moreList = qs('#moreList'); more.forEach(m=>{ const c = document.createElement('div'); c.style.width='120px'; c.innerHTML = `<img src="${m.poster}" style="width:100%;border-radius:8px"><div style="font-size:13px;margin-top:6px">${m.title}</div>`; c.onclick=()=>location.hash='#/movie/'+m.id; moreList.appendChild(c); });
+    }
+
+    /* ---------------------------
+       Player view (dummy video)
+       ---------------------------*/
+    function renderPlayer(id){
+      const movie = MOVIES.find(m=>m.id===id) || {title:'Demo Video',poster:'https://picsum.photos/seed/play/600/900'};
+      // sample open demo video (public domain)
+      const sampleVideo = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+
+      root.innerHTML = `
+        <div class="breadcrumbs"><a href="#/">Home</a> / <a href="#/movie/${movie.id}">${movie.title}</a> / <strong>Player</strong></div>
+        <div style="margin-top:8px" class="player-wrap">
+          <video id="player" controls preload="metadata" poster="${movie.poster}">
+            <source src="${sampleVideo}" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <div style="color:var(--muted)">Now playing: <strong>${movie.title}</strong></div>
+            <div>
+              <button class="chip" onclick="location.hash='#/movie/${movie.id}'">Back to details</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const video = qs('#player');
+      // demo keyboard shortcuts
+      video.addEventListener('keydown', (e)=>{
+        if(e.code==='Space') e.preventDefault();
+      });
+
+      // simple analytics stub
+      console.log('Playing:', movie.title);
+    }
+
+    /* ---------------------------
+       Tiny progressive enhancement: search param handling
+       ---------------------------*/
+    (function syncSearchToInput(){
+      const url = new URL(location.href);
+      const q = url.searchParams.get('q') || '';
+      searchInput.value = decodeURIComponent(q);
+    })();
+
+  </script>
+</body>
+</html>
